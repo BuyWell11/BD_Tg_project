@@ -20,10 +20,8 @@ dp = Dispatcher(bot, storage=storage)
 
 # States
 class FormClient(StatesGroup):
-    choose = State()
     name = State()  # Will be represented in storage as 'Form:name'
     email = State()
-    number = State()
     item = State()
     duration = State()
 
@@ -43,6 +41,7 @@ async def cmd_start(message: types.Message):
     await message.answer("Что вы собираетесь делать?", reply_markup=keyboard)
 
 
+# for owner
 @dp.message_handler(Text(equals="Сдавать"))
 async def menu(message: types.Message):
     await message.reply("Хорошо", reply_markup=types.ReplyKeyboardRemove())
@@ -54,35 +53,11 @@ async def menu(message: types.Message):
     await message.answer("Меню", reply_markup=keyboard)
 
 
+# add new
 @dp.message_handler(Text(equals="Добавить"))
 async def second_menu(message: types.Message):
     await FormOwner.name.set()
     await message.reply("Ну начнём. \nКак к вам обращаться?", reply_markup=types.ReplyKeyboardRemove())
-
-
-@dp.message_handler(lambda message: message.text == "Арендовывать")
-async def second_menu(message: types.Message):
-    await message.reply("Хорошо", reply_markup=types.ReplyKeyboardRemove())
-    await FormClient.choose.set()
-    await message.reply("Как к вам обращаться?")
-
-
-# You can use state '*' if you need to handle all states
-@dp.message_handler(state='*', commands='cancel')
-@dp.message_handler(Text(equals='cancel', ignore_case=True), state='*')
-async def cancel_handler(message: types.Message, state: FSMContext):
-    """
-    Allow user to cancel any action
-    """
-    current_state = await state.get_state()
-    if current_state is None:
-        return
-
-    logging.info('Cancelling state %r', current_state)
-    # Cancel state and inform user about it
-    await state.finish()
-    # And remove keyboard (just in case)
-    await message.reply('Cancelled.', reply_markup=types.ReplyKeyboardRemove())
 
 
 @dp.message_handler(state=FormOwner.name)
@@ -126,16 +101,31 @@ async def set_price_invalid(message: types.Message):
     return await message.reply("Это должна быть цифра!.\nКакую ежемесячную плату в рублях вы хотите поставить?")
 
 
+# You can use state '*' if you need to handle all states
+@dp.message_handler(state='*', commands='cancel')
+@dp.message_handler(Text(equals='cancel', ignore_case=True), state='*')
+async def cancel_handler(message: types.Message, state: FSMContext):
+    """
+    Allow user to cancel any action
+    """
+    current_state = await state.get_state()
+    if current_state is None:
+        return
+
+    logging.info('Cancelling state %r', current_state)
+    # Cancel state and inform user about it
+    await state.finish()
+    # And remove keyboard (just in case)
+    await message.reply('Cancelled.', reply_markup=types.ReplyKeyboardRemove())
+
+
 @dp.message_handler(lambda message: message.text.isdigit(), state=FormOwner.price)
 async def set_price(message: types.Message, state: FSMContext):
 
     await state.update_data(price=int(message.text))
     async with state.proxy() as data:
-        data['gender'] = message.text
-
         # Remove keyboard
         markup = types.ReplyKeyboardRemove()
-
         # And send message
         await bot.send_message(
             message.chat.id,
@@ -144,6 +134,101 @@ async def set_price(message: types.Message, state: FSMContext):
                 md.text('Email:', data['email']),
                 md.text('Free space:', data['free_space']),
                 md.text('price:', data['price']),
+                sep='\n',
+            ),
+            reply_markup=markup,
+            parse_mode=ParseMode.MARKDOWN,
+        )
+
+    # Finish conversation
+    await state.finish()
+
+
+# for client
+@dp.message_handler(lambda message: message.text == "Арендовывать")
+async def menu(message: types.Message):
+    await message.reply("Хорошо", reply_markup=types.ReplyKeyboardRemove())
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    buttons = ["Арендовать"]
+    keyboard.add(*buttons)
+    buttons = ["Посмотреть уже арендованные"]
+    keyboard.add(*buttons)
+    await message.answer("Меню", reply_markup=keyboard)
+
+
+# add new
+@dp.message_handler(Text(equals="Арендовать"))
+async def second_menu(message: types.Message):
+    await FormClient.name.set()
+    await message.reply("Ну начнём. \nКак к вам обращаться?", reply_markup=types.ReplyKeyboardRemove())
+
+
+@dp.message_handler(state=FormClient.name)
+async def process_name(message: types.Message, state: FSMContext):
+    """
+    Process user name
+    """
+    async with state.proxy() as data_client:
+        data_client['name'] = message.text
+
+    await FormClient.next()
+    await message.reply("Введите ваш email")
+
+
+@dp.message_handler(state=FormClient.email)
+async def process_email(message: types.Message, state: FSMContext):
+    async with state.proxy() as data_client:
+        data_client['email'] = message.text
+    await FormClient.next()
+    await message.reply("Укажите предметы и сколько места они занимают(м^2) в формате: предмет1 = x, предмет2 = x")
+
+
+@dp.message_handler(state=FormClient.item)
+async def set_space(message: types.Message, state: FSMContext):
+    # Update state and data
+    items = message.text.split(", ")
+    list_of_items = {}
+    for elem in items:
+        temp = elem.split(" = ")
+        list_of_items[temp[0]] = temp[1]
+    async with state.proxy() as data_client:
+        data_client['items'] = list_of_items
+    await FormClient.next()
+    await message.reply("Отлично! Осталось выбрать подходящего арендодателя")
+
+
+# You can use state '*' if you need to handle all states
+@dp.message_handler(state='*', commands='cancel')
+@dp.message_handler(Text(equals='cancel', ignore_case=True), state='*')
+async def cancel_handler(message: types.Message, state: FSMContext):
+    """
+    Allow user to cancel any action
+    """
+    current_state = await state.get_state()
+    if current_state is None:
+        return
+
+    logging.info('Cancelling state %r', current_state)
+    # Cancel state and inform user about it
+    await state.finish()
+    # And remove keyboard (just in case)
+    await message.reply('Cancelled.', reply_markup=types.ReplyKeyboardRemove())
+
+
+@dp.message_handler(state=FormClient.duration)
+async def set_price(message: types.Message, state: FSMContext):
+
+    await state.update_data(price=int(message.text))
+    async with state.proxy() as data:
+        # Remove keyboard
+        markup = types.ReplyKeyboardRemove()
+        # And send message
+        await bot.send_message(
+            message.chat.id,
+            md.text(
+                md.text('Hi! Nice to meet you,', md.bold(data['name'])),
+                md.text('Email:', data['email']),
+                md.text('Free space:', data['items']),
                 sep='\n',
             ),
             reply_markup=markup,
