@@ -24,17 +24,22 @@ def add_new_user(user_id_):
     return True
 
 
+def general_item_space(client_id):
+    cursor.execute("SELECT SUM(item_space) FROM items WHERE owner = %s", (client_id,))
+    return cursor.fetchone()
+
+
+def available_sklads(item_space_sum):
+    cursor.execute("SELECT * FROM skladi WHERE free_space >= %s", (item_space_sum,))
+    return cursor.fetchall()
+
+
 connection = create_connection()
 
 print(connection)
 
 cursor = connection.cursor()
 
-user = add_new_user(345)
-
-cursor.execute("SELECT * FROM all_users")
-record = cursor.fetchall()
-print(record)
 
 cursor.close()
 connection.close()
