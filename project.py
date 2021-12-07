@@ -34,6 +34,16 @@ def available_sklads(item_space_sum):
     return cursor.fetchall()
 
 
+def info_about_items(user_id_):
+    cursor.execute("SELECT * FROM items WHERE owner = %s", (user_id_,))
+    return cursor.fetchall()
+
+
+def info_about_owner_sklads(owner_id_):
+    cursor.execute("SELECT * FROM skladi WHERE owner_id = %s", (owner_id_,))
+    return cursor.fetchall()
+
+
 connection = create_connection()
 
 print(connection)
