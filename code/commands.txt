@@ -1,21 +1,5 @@
-create or replace function truncate_all_users() returns void as $$
+create or replace function edit_user_status(user_id_ integer, mode_ boolean) returns void as $$
 begin
-	truncate all_users cascade;
-end;
-$$ language plpgsql;
-
-
-create or replace function truncate_all() returns void as $$
-begin
-	truncate all_users, client, contracts, items, sklad_owner, skladi, skladi_client cascade;
-end;
-$$ language plpgsql;
-
-
-create or replace function edit_client_info(client_id_ integer, new_client_name char, new_client_email char) returns setof client as $$
-begin
-	update client set client_name = new_client_name where client_id = client_id_;
-	update client set client_email = new_client_email where client_id = client_id_;
-	return query select * from client where client_id = client_id_;
+	update all_users set is_admin = mode_ where user_id = user_id_;
 end;
 $$ language plpgsql;

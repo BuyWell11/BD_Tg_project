@@ -253,3 +253,10 @@ def edit_client_info(con, client_id_, new_client_name, new_client_email):
     cur = con.cursor()
     cur.callproc('edit_client_info', [client_id_, new_client_name, new_client_email])
     return cur.fetchall()
+
+
+def edit_user_status(con, user_id_, mode_):
+    cur = con.cursor()
+    s = cur.callproc('edit_user_status', [user_id_, mode_])
+    print(s)
+    con.commit()
