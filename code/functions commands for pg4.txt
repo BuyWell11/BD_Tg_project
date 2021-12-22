@@ -305,3 +305,11 @@ begin
 	update all_users set is_admin = mode_ where user_id = user_id_;
 end;
 $$ language plpgsql;
+
+
+create or replace function info_about_all_users(user_id_ integer) 
+returns setof all_users as $$
+begin
+	return query SELECT * FROM all_users WHERE user_id = user_id_;
+end;
+$$ language plpgsql;
