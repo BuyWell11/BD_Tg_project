@@ -177,3 +177,97 @@ begin
 end;
 $$ language plpgsql;
 
+
+
+create or replace function del_client(client_id_ integer) returns void as $$
+begin
+	delete from client where client_id = client_id_;
+end;
+$$ language plpgsql;
+
+
+
+create or replace function del_item(item_id_ integer) returns void as $$
+begin
+	delete from items where item_id = item_id_;
+end;
+$$ language plpgsql;
+
+
+
+create or replace function del_contract(contract_id_ integer) returns void as $$
+begin
+	delete from contracts where contract_id = ontract_id_;
+end;
+$$ language plpgsql;
+
+
+
+create or replace function del_owner(owner_id_ integer) returns void as $$
+begin
+	delete from sklad_owner where owner_id = owner_id_;
+end;
+$$ language plpgsql;
+
+
+
+create or replace function add_new_skladi_client(client_id_ integer, sklad_id_ integer) returns void as $$
+begin
+	INSERT INTO skladi_client VALUES ( sklad_id_, client_id_ );
+end;
+$$ language plpgsql;
+
+
+
+create or replace function truncate_sklad_owner() returns void as $$
+begin
+	truncate sklad_owner cascade;
+end;
+$$ language plpgsql;
+
+
+create or replace function truncate_skladi() returns void as $$
+begin
+	truncate skladi cascade;
+end;
+$$ language plpgsql;
+
+
+
+create or replace function truncate_contracts() returns void as $$
+begin
+	truncate contracts cascade;
+end;
+$$ language plpgsql;
+
+
+
+create or replace function truncate_client() returns void as $$
+begin
+	truncate client cascade;
+end;
+$$ language plpgsql;
+
+
+
+create or replace function truncate_items() returns void as $$
+begin
+	truncate items cascade;
+end;
+$$ language plpgsql;
+
+
+
+create or replace function truncate_items() returns void as $$
+begin
+	truncate items cascade;
+end;
+$$ language plpgsql;
+
+
+
+create or replace function truncate_skladi_client() returns void as $$
+begin
+	truncate skladi_client cascade;
+end;
+$$ language plpgsql;
