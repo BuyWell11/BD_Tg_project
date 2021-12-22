@@ -1,165 +1,92 @@
-CREATE SEQUENCE contracts_inc;
-alter table contracts alter column contract_id set default nextval('contracts_inc');
-
-CREATE SEQUENCE sklad_inc;
-alter table skladi alter column sklad_id set default nextval('sklad_inc');
-
-
-CREATE SEQUENCE item_inc;
-alter table items alter column item_id set default nextval('item_inc');
-
-
-
-create or replace function reset_skladi_inc() returns void as $$
+create or replace function del_client(client_id_ integer) returns void as $$
 begin
-	alter sequence skladi_inc restart;
-end;
-$$ language plpgsql;
-
-
-create or replace function reset_contracts_inc() returns void as $$
-begin
-	alter sequence contracts_inc restart;
-end;
-$$ language plpgsql;
-
-
-create or replace function reset_item_inc() returns void as $$
-begin
-	alter sequence item_inc restart;
+	delete from client where client_id = client_id_;
 end;
 $$ language plpgsql;
 
 
 
-drop function add_new_sklad(sklad_id_ integer, owner_id_ integer, free_space_ integer, total_space_ integer, price_for_one_month integer);
-
-create or replace function add_new_sklad(owner_id_ integer, free_space_ integer, total_space_ integer, price_for_one_month integer) returns void as $$
+create or replace function del_item(item_id_ integer) returns void as $$
 begin
-	INSERT INTO skladi(owner_id, free_space, total_space, price_for_one_month)
-	VALUES ( owner_id_, free_space_, total_space_, price_for_one_month );
-end;
-$$ language plpgsql;
-
-
-drop function add_new_contract(contract_id_ integer, sklad_id_ integer, client_id_ integer, rent_duration_ integer);
-
-create or replace function add_new_contract(sklad_id_ integer, client_id_ integer, rent_duration_ integer) returns void as $$
-begin
-	INSERT INTO contracts(sklad_id, client_id, rent_duration)
-	VALUES ( sklad_id_, client_id_, rent_duration_ );
-end;
-$$ language plpgsql;
-
-
-drop function add_new_item(item_id_ integer, item_name_ char, item_space_ integer, owner_ integer);
-
-create or replace function add_new_item(item_name_ char, item_space_ integer, owner_ integer) returns void as $$
-begin
-	INSERT INTO items(item_name, item_space, owner)
-	VALUES ( item_name_, item_space_, owner_ );
+	delete from items where item_id = item_id_;
 end;
 $$ language plpgsql;
 
 
 
-create or replace function is_user_client(client_id_ int) returns boolean as $$
+create or replace function del_contract(contract_id_ integer) returns void as $$
 begin
-	if exists (SELECT client_id from client where client_id = client_id_) then
-		return 1;
-	end if;
-	return 0;
+	delete from contracts where contract_id = contract_id_;
 end;
 $$ language plpgsql;
 
 
 
-create or replace function is_user_owner(user_id int) returns boolean as $$
+create or replace function del_owner(owner_id_ integer) returns void as $$
 begin
-	if exists (SELECT owner_id from sklad_owner where owner_id = user_id) then
-		return 1;
-	end if;
-	return 0;
+	delete from sklad_owner where owner_id = owner_id_;
 end;
 $$ language plpgsql;
 
 
 
-create or replace function calculate_free_space(client_id_ integer, sklad_id_ integer) returns void as $$
-declare
-	item_space integer;
+create or replace function add_new_skladi_client(client_id_ integer, sklad_id_ integer) returns void as $$
 begin
-	item_space = (select general_item_space(client_id_));
-	update skladi set free_space = (skladi.free_space - item_space) where sklad_id = sklad_id_;
+	INSERT INTO skladi_client VALUES ( sklad_id_, client_id_ );
 end;
 $$ language plpgsql;
 
 
 
-drop function add_new_user(user_id_ integer, is_admin_ boolean);
-
-create or replace function add_new_user(user_id_ integer, is_admin_ boolean) returns void as $$
+create or replace function truncate_sklad_owner() returns void as $$
 begin
-	if not exists (SELECT user_id from all_users where user_id = user_id_) then
-		INSERT INTO all_users VALUES ( user_id_, is_admin_ );
-	end if;
+	truncate sklad_owner cascade;
+end;
+$$ language plpgsql;
+
+
+create or replace function truncate_skladi() returns void as $$
+begin
+	truncate skladi cascade;
 end;
 $$ language plpgsql;
 
 
 
-drop function add_new_client(client_id_ integer, client_name_ char, client_email_ char);
-
-create or replace function add_new_client(client_id_ integer, client_name_ char, client_email_ char) returns void as $$
+create or replace function truncate_contracts() returns void as $$
 begin
-	if not exists (SELECT client_id from client where client_id = client_id_) then
-		INSERT INTO client VALUES ( client_id_, client_name_, client_email_ );
-	end if;
+	truncate contracts cascade;
 end;
 $$ language plpgsql;
 
 
 
-drop function add_new_item(item_name_ char, item_space_ integer, owner_ integer);
-
-create or replace function add_new_item(item_name_ char, item_space_ integer, owner_ integer) returns void as $$
+create or replace function truncate_client() returns void as $$
 begin
-	INSERT INTO items(item_name, item_space, owner)
-	VALUES ( item_name_, item_space_, owner_ );
+	truncate client cascade;
 end;
 $$ language plpgsql;
 
 
 
-drop function add_new_owner(owner_id_ integer, owner_name_ char, owner_email_ char);
-
-create or replace function add_new_owner(owner_id_ integer, owner_name_ char, owner_email_ char) returns void as $$
+create or replace function truncate_items() returns void as $$
 begin
-	if not exists (SELECT * from sklad_owner where owner_id = owner_id_) then
-		INSERT INTO sklad_owner VALUES ( owner_id_, owner_name_, owner_email_ );
-	end if;
+	truncate items cascade;
 end;
 $$ language plpgsql;
 
 
 
-drop function available_sklads(client_id integer);
-
-create or replace function available_sklads(client_id integer) returns setof skladi as $$
-declare
-	item_space_sum int;
+create or replace function truncate_items() returns void as $$
 begin
-	item_space_sum = (select general_item_space(client_id));
-	return query select * FROM skladi WHERE skladi.free_space >= item_space_sum;
+	truncate items cascade;
 end;
 $$ language plpgsql;
 
 
 
-drop function del_sklad(sklad_id_ integer);
-
-create or replace function del_sklad(sklad_id_ integer) returns void as $$
+create or replace function truncate_skladi_client() returns void as $$
 begin
-	delete from skladi where sklad_id = sklad_id_;
+	truncate skladi_client cascade;
 end;
-$$ language plpgsql; 
+$$ language plpgsql;
