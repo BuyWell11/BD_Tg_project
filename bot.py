@@ -1,5 +1,6 @@
 import logging
 import config
+from project import *
 import aiogram.utils.markdown as md
 from aiogram import Bot, Dispatcher, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
@@ -17,71 +18,120 @@ bot = Bot(token=config.token)
 storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage)
 
+connection = create_connection()
+
+
 
 # States
-class FormClient(StatesGroup):
-    name = State()  # Will be represented in storage as 'Form:name'
+class FormState(StatesGroup):
+    name = State()
     email = State()
+    choose = State()
+
+
+class FormClient(StatesGroup):
+    menu = State()
     item = State()
+    choose = State()
     duration = State()
 
 
 class FormOwner(StatesGroup):
-    name = State()
-    email = State()
+    menu = State()
+    delete = State()
     free_space = State()
     price = State()
 
 
 @dp.message_handler(commands="start")
 async def cmd_start(message: types.Message):
+    global connection
+    print(message.chat.id)
+    if is_user_owner(connection, message.chat.id):
+        await FormOwner.menu.set()
+        keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        buttons = ["Добавить", "Посмотреть уже добавленные склады", "Удалить", "Мои контракты"]
+        keyboard.add(*buttons)
+        await message.answer("Меню", reply_markup=keyboard)
+    elif is_user_client(connection, message.chat.id):
+        await FormClient.menu.set()
+        keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        buttons = ["Арендовать помещение", "Посмотреть свои контракты", "Мои вещи"]
+        keyboard.add(*buttons)
+        await message.answer("Меню", reply_markup=keyboard)
+    else:
+        add_new_user(connection, message.chat.id)
+        await FormState.name.set()
+        await message.answer("Введите ваше имя")
+
+
+# add new
+@dp.message_handler(state=FormState.name)
+async def process_name(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['name'] = message.text
+    await FormState.email.set()
+    await message.reply("Введите ваш email")
+
+
+@dp.message_handler(state=FormState.email)
+async def process_email(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['email'] = message.text
+    await FormState.choose.set()
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
     buttons = ["Сдавать", "Арендовывать"]
     keyboard.add(*buttons)
     await message.answer("Что вы собираетесь делать?", reply_markup=keyboard)
 
 
+@dp.message_handler(state=FormState.choose)
+async def choose(message: types.Message, state: FSMContext):
+    global connection
+    async with state.proxy() as data:
+        if message.text == 'Сдавать':
+            await FormOwner.menu.set()
+            add_new_owner(connection, message.chat.id, data['name'], data['email'])
+            keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            buttons = ["Добавить", "Посмотреть уже добавленные склады", "Удалить", "Мои контракты"]
+            keyboard.add(*buttons)
+            await message.answer("Меню", reply_markup=keyboard)
+        if message.text == 'Арендовывать':
+            await FormClient.menu.set()
+            add_new_client(connection, message.chat.id, data['name'], data['email'])
+            keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            buttons = ["Арендовать помещение", "Посмотреть свои контракты", "Мои вещи"]
+            keyboard.add(*buttons)
+            await message.answer("Меню", reply_markup=keyboard)
+
 # for owner
-@dp.message_handler(Text(equals="Сдавать"))
+@dp.message_handler(state=FormOwner.menu)
 async def menu(message: types.Message):
-    await message.reply("Хорошо", reply_markup=types.ReplyKeyboardRemove())
-    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    buttons = ["Добавить"]
-    keyboard.add(*buttons)
-    buttons = ["Посмотреть уже добавленные"]
-    keyboard.add(*buttons)
-    await message.answer("Меню", reply_markup=keyboard)
+    global connection
+    if message.text == 'Добавить':
+        await FormOwner.free_space.set()
+        await message.reply("Сколько места на вашем складе в квадратных метрах?")
+    if message.text == 'Посмотреть уже добавленные склады':
+        text = info_about_owner_sklads(connection, message.chat.id)
+        for sklad in text:
+            await message.answer(f"Номер склада {sklad[0]}\nСвободное место {sklad[2]}\nВсего места {sklad[3]}\nЦена за месяц {sklad[4]}")
+        keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        buttons = ["Добавить", "Посмотреть уже добавленные склады", "Удалить", "Мои контракты"]
+        keyboard.add(*buttons)
+        await message.answer("Меню", reply_markup=keyboard)
+    if message.text == 'Мои контракты':
+        text = info_about_owner_contracts(connection, message.chat.id)
+        for contract in text:
+            await message.answer(f"Номер склада {contract[1]}\nПользователь {contract[2]}\nПродолжительность аренды {contract[3]}\n Цена {contract[4]}\n")
+        keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        buttons = ["Добавить", "Посмотреть уже добавленные склады", "Удалить", "Мои контракты"]
+        keyboard.add(*buttons)
+    if message.text == 'Удалить':
+        await FormOwner.delete.set()
+        await message.reply("Напишите номер того, какой хотите удалить")
 
 
-# add new
-@dp.message_handler(Text(equals="Добавить"))
-async def second_menu(message: types.Message):
-    await FormOwner.name.set()
-    await message.reply("Ну начнём. \nКак к вам обращаться?", reply_markup=types.ReplyKeyboardRemove())
-
-
-@dp.message_handler(state=FormOwner.name)
-async def process_name(message: types.Message, state: FSMContext):
-    """
-    Process user name
-    """
-    async with state.proxy() as data_owner:
-        data_owner['name'] = message.text
-
-    await FormOwner.next()
-    await message.reply("Введите ваш email")
-
-
-@dp.message_handler(state=FormOwner.email)
-async def process_email(message: types.Message, state: FSMContext):
-    async with state.proxy() as data_owner:
-        data_owner['email'] = message.text
-
-    await FormOwner.next()
-    await message.reply("Сколько места на вашем складе в квадратных метрах?")
-
-
-# Check age. Age gotta be digit
+# add new sklad
 @dp.message_handler(lambda message: not message.text.isdigit(), state=FormOwner.free_space)
 async def set_space_invalid(message: types.Message):
     return await message.reply("Это должна быть цифра!.\nСколько места на вашем складе в квадратных метрах?")
@@ -89,10 +139,8 @@ async def set_space_invalid(message: types.Message):
 
 @dp.message_handler(lambda message: message.text.isdigit(), state=FormOwner.free_space)
 async def set_space(message: types.Message, state: FSMContext):
-    # Update state and data
-    await FormOwner.next()
+    await FormOwner.price.set()
     await state.update_data(free_space=int(message.text))
-
     await message.reply("Какую ежемесячную плату в рублях вы хотите поставить?")
 
 
@@ -101,6 +149,32 @@ async def set_price_invalid(message: types.Message):
     return await message.reply("Это должна быть цифра!.\nКакую ежемесячную плату в рублях вы хотите поставить?")
 
 
+@dp.message_handler(lambda message: message.text.isdigit(), state=FormOwner.price)
+async def set_price(message: types.Message, state: FSMContext):
+    global connection
+    await state.update_data(price=int(message.text))
+    async with state.proxy() as data:
+        add_new_sklad(connection, message.chat.id, data['free_space'], data['free_space'], data['price'])
+        await message.reply("Отлично, добавил")
+    await FormOwner.menu.set()
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    buttons = ["Добавить", "Посмотреть уже добавленные склады", "Удалить", "Мои контракты"]
+    keyboard.add(*buttons)
+    await message.answer("Меню", reply_markup=keyboard)
+
+# delet sklad
+@dp.message_handler(state=FormOwner.delete)
+async def delete(message: types.Message):
+    global connection
+    del_sklad(connection, message.text)
+    await message.reply("Готово")
+    await FormOwner.menu.set()
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    buttons = ["Добавить", "Посмотреть уже добавленные склады", "Удалить", "Мои контракты"]
+    keyboard.add(*buttons)
+    await message.answer("Меню", reply_markup=keyboard)
+
+
 # You can use state '*' if you need to handle all states
 @dp.message_handler(state='*', commands='cancel')
 @dp.message_handler(Text(equals='cancel', ignore_case=True), state='*')
@@ -116,127 +190,77 @@ async def cancel_handler(message: types.Message, state: FSMContext):
     # Cancel state and inform user about it
     await state.finish()
     # And remove keyboard (just in case)
-    await message.reply('Cancelled.', reply_markup=types.ReplyKeyboardRemove())
-
-
-@dp.message_handler(lambda message: message.text.isdigit(), state=FormOwner.price)
-async def set_price(message: types.Message, state: FSMContext):
-
-    await state.update_data(price=int(message.text))
-    async with state.proxy() as data:
-        # Remove keyboard
-        markup = types.ReplyKeyboardRemove()
-        # And send message
-        await bot.send_message(
-            message.chat.id,
-            md.text(
-                md.text('Hi! Nice to meet you,', md.bold(data['name'])),
-                md.text('Email:', data['email']),
-                md.text('Free space:', data['free_space']),
-                md.text('price:', data['price']),
-                sep='\n',
-            ),
-            reply_markup=markup,
-            parse_mode=ParseMode.MARKDOWN,
-        )
-
-    # Finish conversation
-    await state.finish()
+    await message.reply('Отменен, пропишите /start', reply_markup=types.ReplyKeyboardRemove())
 
 
 # for client
-@dp.message_handler(lambda message: message.text == "Арендовывать")
+@dp.message_handler(state=FormClient.menu)
 async def menu(message: types.Message):
-    await message.reply("Хорошо", reply_markup=types.ReplyKeyboardRemove())
-    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    buttons = ["Арендовать"]
-    keyboard.add(*buttons)
-    buttons = ["Посмотреть уже арендованные"]
-    keyboard.add(*buttons)
-    await message.answer("Меню", reply_markup=keyboard)
-
-
-# add new
-@dp.message_handler(Text(equals="Арендовать"))
-async def second_menu(message: types.Message):
-    await FormClient.name.set()
-    await message.reply("Ну начнём. \nКак к вам обращаться?", reply_markup=types.ReplyKeyboardRemove())
-
-
-@dp.message_handler(state=FormClient.name)
-async def process_name(message: types.Message, state: FSMContext):
-    """
-    Process user name
-    """
-    async with state.proxy() as data_client:
-        data_client['name'] = message.text
-
-    await FormClient.next()
-    await message.reply("Введите ваш email")
-
-
-@dp.message_handler(state=FormClient.email)
-async def process_email(message: types.Message, state: FSMContext):
-    async with state.proxy() as data_client:
-        data_client['email'] = message.text
-    await FormClient.next()
-    await message.reply("Укажите предметы и сколько места они занимают(м^2) в формате: предмет1 = x, предмет2 = x")
+    global connection
+    if message.text == 'Арендовать помещение':
+        await FormClient.item.set()
+        await message.reply("Укажите предметы и сколько места они занимают(м^2) в формате: предмет1 = x, предмет2 = x")
+    if message.text == 'Посмотреть свои контракты':
+        text = info_about_client_contracts(connection, message.chat.id)
+        for contract in text:
+            await message.answer(f"Склад: {contract[1]}\nпродолжительность аренды: {contract[3]}\nцена за аренду: {contract[4]}")
+        await message.reply(text)
+        keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        buttons = ["Арендовать помещение", "Посмотреть свои контракты", "Мои вещи"]
+        keyboard.add(*buttons)
+        await message.answer("Меню", reply_markup=keyboard)
+    if message.text == 'Мои вещи':
+        text = info_about_items(connection, message.chat.id)
+        for item in text:
+            await message.answer(f"{item[1]}\n{item[2]}")
+        keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        buttons = ["Арендовать помещение", "Посмотреть свои контракты", "Мои вещи"]
+        keyboard.add(*buttons)
+        await message.answer("Меню", reply_markup=keyboard)
 
 
 @dp.message_handler(state=FormClient.item)
 async def set_space(message: types.Message, state: FSMContext):
     # Update state and data
+    global connection
     items = message.text.split(", ")
     list_of_items = {}
     for elem in items:
         temp = elem.split(" = ")
         list_of_items[temp[0]] = temp[1]
+        add_new_item(connection, temp[0], temp[1], message.chat.id)
     async with state.proxy() as data_client:
         data_client['items'] = list_of_items
     await FormClient.next()
-    await message.reply("Отлично! Осталось выбрать подходящего арендодателя")
+    await message.reply("Отлично! Осталось выбрать подходящего арендодателя\nНапишите номер выбранного склада")
+    text = available_sklads(connection, message.chat.id)
+    for sklad in text:
+        await message.answer(f"номер склада {sklad[0]} цена за месяц {sklad[4]}\n")
 
 
-# You can use state '*' if you need to handle all states
-@dp.message_handler(state='*', commands='cancel')
-@dp.message_handler(Text(equals='cancel', ignore_case=True), state='*')
-async def cancel_handler(message: types.Message, state: FSMContext):
-    """
-    Allow user to cancel any action
-    """
-    current_state = await state.get_state()
-    if current_state is None:
-        return
 
-    logging.info('Cancelling state %r', current_state)
-    # Cancel state and inform user about it
-    await state.finish()
-    # And remove keyboard (just in case)
-    await message.reply('Cancelled.', reply_markup=types.ReplyKeyboardRemove())
+@dp.message_handler(state=FormClient.choose)
+async def set_price(message: types.Message, state: FSMContext):
+    await message.reply("Введите продолжительность аренды в месяцах")
+    await FormClient.next()
+    async with state.proxy() as data_client:
+        data_client['sklad'] = message.text
 
 
 @dp.message_handler(state=FormClient.duration)
 async def set_price(message: types.Message, state: FSMContext):
+    global connection
+    async with state.proxy() as data_client:
+        data_client['dur'] = message.text
+        add_new_contract(connection, data_client['sklad'], message.chat.id, data_client['dur'])
+        calculate_free_space(connection, message.chat.id, data_client['sklad'])
+    await FormClient.menu.set()
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    buttons = ["Арендовать помещение", "Посмотреть свои контракты", "Мои вещи"]
+    keyboard.add(*buttons)
+    await message.answer("Меню", reply_markup=keyboard)
 
-    await state.update_data(price=int(message.text))
-    async with state.proxy() as data:
-        # Remove keyboard
-        markup = types.ReplyKeyboardRemove()
-        # And send message
-        await bot.send_message(
-            message.chat.id,
-            md.text(
-                md.text('Hi! Nice to meet you,', md.bold(data['name'])),
-                md.text('Email:', data['email']),
-                md.text('Free space:', data['items']),
-                sep='\n',
-            ),
-            reply_markup=markup,
-            parse_mode=ParseMode.MARKDOWN,
-        )
 
-    # Finish conversation
-    await state.finish()
 
 
 if __name__ == '__main__':

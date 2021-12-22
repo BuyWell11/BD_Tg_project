@@ -157,14 +157,3 @@ def calculate_free_space(con, client_id, sklad_id):
     print(s)
     con.commit()
 
-
-connection = create_connection()
-
-print(connection)
-
-cursor = connection.cursor()
-
-
-
-cursor.close()
-connection.close()
