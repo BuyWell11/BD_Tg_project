@@ -271,3 +271,19 @@ begin
 	truncate skladi_client cascade;
 end;
 $$ language plpgsql;
+
+
+
+create or replace function truncate_all_users() returns void as $$
+begin
+	truncate all_users cascade;
+end;
+$$ language plpgsql;
+
+
+
+create or replace function truncate_all() returns void as $$
+begin
+	truncate all_users, client, contracts, items, sklad_owner, skladi, skladi_client cascade;
+end;
+$$ language plpgsql;

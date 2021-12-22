@@ -30,3 +30,6 @@
 29. Полностью очищает таблицу client (вместе с таблицей items) (void) -- truncate_client()
 30. Полностью очищает таблицу items (void) -- truncate_items()
 31. Полностью очищает таблицу skladi_client (void) -- truncate_skladi_client()
+
+32. Полностью очищает таблицу all_users (void) -- truncate_all_users()
+33. Полностью очищает ВСЕ таблицы (void) -- truncate_all()
