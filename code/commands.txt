@@ -10,3 +10,12 @@ begin
 	truncate all_users, client, contracts, items, sklad_owner, skladi, skladi_client cascade;
 end;
 $$ language plpgsql;
+
+
+create or replace function edit_client_info(client_id_ integer, new_client_name char, new_client_email char) returns setof client as $$
+begin
+	update client set client_name = new_client_name where client_id = client_id_;
+	update client set client_email = new_client_email where client_id = client_id_;
+	return query select * from client where client_id = client_id_;
+end;
+$$ language plpgsql;
