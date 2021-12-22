@@ -307,9 +307,9 @@ end;
 $$ language plpgsql;
 
 
-create or replace function info_about_all_users(user_id_ integer) 
+create or replace function info_about_all_users() 
 returns setof all_users as $$
 begin
-	return query SELECT * FROM all_users WHERE user_id = user_id_;
+	return query SELECT * FROM all_users;
 end;
 $$ language plpgsql;

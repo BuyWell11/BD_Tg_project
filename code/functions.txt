@@ -37,4 +37,4 @@
 
 35. Изменяет права пользователя в таблице all_users (void) -- edit_user_status(user_id_ integer, mode_ boolean)
 
-36. Выводит информацию о всех пользователях в all_users (tuple) -- info_about_all_users(user_id_ integer)
+36. Выводит информацию о всех пользователях в all_users (tuple) -- info_about_all_users()

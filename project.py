@@ -262,7 +262,7 @@ def edit_user_status(con, user_id_, mode_):
     con.commit()
 
 
-def info_about_all_users(con, user_id):
+def info_about_all_users(con):
     cur = con.cursor()
-    cur.callproc('info_about_all_users', [user_id])
+    cur.callproc('info_about_all_users', [])
     return cur.fetchall()
