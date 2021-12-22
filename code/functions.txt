@@ -33,3 +33,4 @@
 
 32. Полностью очищает таблицу all_users (void) -- truncate_all_users()
 33. Полностью очищает ВСЕ таблицы (void) -- truncate_all()
+34. Изменяет имя и имэйл клиента (tuple) -- edit_client_info(client_id_ integer, new_client_name char, new_client_email char)
