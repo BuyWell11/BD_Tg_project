@@ -279,3 +279,7 @@ def info_about_clients(con, client_email):
     return cur.fetchall()
 
 
+def show_all_clients(con):
+    cur = con.cursor()
+    cur.callproc('show_all_clients', [])
+    return cur.fetchall()

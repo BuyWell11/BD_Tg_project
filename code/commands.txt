@@ -1,8 +1,6 @@
-create or replace function del_client(client_email_ char) returns void as $$
+create or replace function show_all_clients() 
+returns setof client as $$
 begin
-	delete from client where client_email = client_email_;
+	return query SELECT * FROM client;
 end;
 $$ language plpgsql;
-
-
-drop function del_client(client_id_ char)

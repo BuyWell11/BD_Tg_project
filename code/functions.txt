@@ -40,3 +40,5 @@
 36. Выводит информацию о всех пользователях в all_users (tuple) -- info_about_all_users()
 
 37. Ищет клиента по email (tuple) -- info_about_clients(client_email_ char)
+
+38. Выводит всех клиентов (tuple) -- show_all_clients()
