@@ -1,9 +1,8 @@
-create or replace function info_about_clients(client_email_ char) 
-returns setof client as $$
+create or replace function del_client(client_email_ char) returns void as $$
 begin
-	return query SELECT * FROM client WHERE client_email = client_email_;
+	delete from client where client_email = client_email_;
 end;
 $$ language plpgsql;
 
 
-create unique index client_email_ on client(client_email)
+drop function del_client(client_id_ char)

@@ -163,9 +163,9 @@ def calculate_free_space(con, client_id, sklad_id):
     con.commit()
 
 
-def del_client(con, client_id):
+def del_client(con, client_email):
     cur = con.cursor()
-    s = cur.callproc('del_client', [client_id])
+    s = cur.callproc('del_client', [client_email])
     print(s)
     con.commit()
 
@@ -271,4 +271,11 @@ def info_about_all_users(con):
     cur = con.cursor()
     cur.callproc('info_about_all_users', [])
     return cur.fetchall()
+
+
+def info_about_clients(con, client_email):
+    cur = con.cursor()
+    cur.callproc('info_about_clients', [client_email])
+    return cur.fetchall()
+
 
