@@ -9,7 +9,6 @@ from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
 def create_connection():
     try:
-        # Подключиться к существующей базе данных
         connection = psycopg2.connect(user="postgres",
                                       password=password,
                                       host="127.0.0.1",
@@ -18,7 +17,13 @@ def create_connection():
 
         print(connection)
     except (Exception, Error) as error:
-        print("Ошибка при работе с PostgreSQL", error)
+        connection = psycopg2.connect(user="postgres",
+                                      password=password,
+                                      host="127.0.0.1",
+                                      port="5432",
+                                      database="postgres")
+
+        print(connection)
 
     return connection
 
@@ -266,3 +271,4 @@ def info_about_all_users(con):
     cur = con.cursor()
     cur.callproc('info_about_all_users', [])
     return cur.fetchall()
+

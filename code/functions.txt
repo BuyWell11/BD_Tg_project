@@ -11,7 +11,7 @@
 11. Выводит клиенту все его контракты (tuple) -- info_about_client_contracts(client_id_ integer)
 12. Выводит овнеру все его контракты (tuple) -- info_about_owner_contracts(owner_id_ integer)
 13. Проверяет админ пльзователь или нет (boolean) -- is_user_admin(user_id_ integer)
-14. Удаление склад из таблицы складов (удаляются контракты и записи с ним из skladi_client) -- (void) del_sklad(sklad_id_ integer)
+14. Удаление склад из таблицы складов (удаляются контракты и записи с ним из skladi_client) (void) -- del_sklad(sklad_id_ integer)
 15. Обновляет счётчик id склада (void) -- reset_sklad_inc()
 16. Обновляет счётчик id контрактов (void) -- reset_contracts_inc()
 17. Обновляет счётчик id вещей (void) -- reset_item_inc()
@@ -38,3 +38,5 @@
 35. Изменяет права пользователя в таблице all_users (void) -- edit_user_status(user_id_ integer, mode_ boolean)
 
 36. Выводит информацию о всех пользователях в all_users (tuple) -- info_about_all_users()
+
+37. Ищет клиента по email (tuple) -- info_about_clients(client_email_ char)

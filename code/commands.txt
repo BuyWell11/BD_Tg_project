@@ -1,8 +1,8 @@
-drop function info_about_all_users(user_id_ integer);
-
-create or replace function info_about_all_users() 
-returns setof all_users as $$
+create or replace function info_about_clients(client_email_ char) 
+returns setof client as $$
 begin
-	return query SELECT * FROM all_users;
+	return query SELECT * FROM client WHERE client_email = client_email_;
 end;
 $$ language plpgsql;
+
+

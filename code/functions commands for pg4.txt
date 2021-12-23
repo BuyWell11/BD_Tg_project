@@ -313,3 +313,12 @@ begin
 	return query SELECT * FROM all_users;
 end;
 $$ language plpgsql;
+
+
+
+create or replace function info_about_clients(client_email_ char) 
+returns setof client as $$
+begin
+	return query SELECT * FROM client WHERE client_email = client_email_;
+end;
+$$ language plpgsql;
