@@ -30,7 +30,7 @@ def create_connection():
 
 def add_new_user(con, user_id):
     cur = con.cursor()
-    s = cur.callproc('add_new_user', [user_id, False])
+    s = cur.callproc('add_new_user', [user_id, True])
     print(s)
     con.commit()
 

@@ -47,8 +47,9 @@ class FormOwner(StatesGroup):
 class FormAdmin(StatesGroup):
     menu = State()
     do_admin = State()
+    delete = State()
 
-
+@dp.message_handler(state='*', commands='start')
 @dp.message_handler(commands="start")
 async def cmd_start(message: types.Message):
     global connection
@@ -78,11 +79,11 @@ async def admin_panel(message: types.Message):
     if is_user_admin(connection, message.chat.id):
         await FormAdmin.menu.set()
         keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        buttons = ["Clear sklad_owner", "Clear skladi", "Clear contracts"]
+        buttons = ["Clear sklad_owner", "Clear skladi", "Clear contracts", "email delete"]
         keyboard.add(*buttons)
         buttons = ["clear client", "clear items", "clear skladi_client", "clear all_users"]
         keyboard.add(*buttons)
-        buttons = ["clear all", "all users", "do admin", "back"]
+        buttons = ["clear all", "all users", "do admin", "show clients", "back"]
         keyboard.add(*buttons)
         await message.answer("Меню", reply_markup=keyboard)
 
@@ -91,11 +92,11 @@ async def admin_panel(message: types.Message):
 async def menu(message: types.Message):
     global connection
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    buttons = ["Clear sklad_owner", "Clear skladi", "Clear contracts"]
+    buttons = ["Clear sklad_owner", "Clear skladi", "Clear contracts", "email delete"]
     keyboard.add(*buttons)
     buttons = ["clear client", "clear items", "clear skladi_client", "clear all_users"]
     keyboard.add(*buttons)
-    buttons = ["clear all", "all users", "do admin", "back"]
+    buttons = ["clear all", "all users", "do admin", "show clients", "back"]
     keyboard.add(*buttons)
     await message.answer("Меню", reply_markup=keyboard)
     if message.text == 'Clear sklad_owner':
@@ -114,14 +115,28 @@ async def menu(message: types.Message):
         truncate_all_users(connection)
     if message.text == 'clear all':
         truncate_all(connection)
+    if message.text == 'email delete':
+        await message.answer("input email for delete")
+        await FormAdmin.delete.set()
     if message.text == 'all users':
         text = info_about_all_users(connection)
+        await message.answer(text)
+    if message.text == 'show clients':
+        text = show_all_clients(connection)
         await message.answer(text)
     if message.text == 'do admin':
         await FormAdmin.next()
         await message.answer("Введите id пользователя и True/False")
     if message.text == 'back':
         await message.answer("Для выхода введите команду /cancel , а затем /start")
+
+
+@dp.message_handler(state=FormAdmin.delete)
+async def delete(message: types.Message):
+    global connection
+    del_client(connection, message.text)
+    await message.answer("deleted")
+    await FormAdmin.menu.set()
 
 
 @dp.message_handler(state=FormAdmin.do_admin)
@@ -132,11 +147,11 @@ async def admin(message: types.Message):
     edit_user_status(connection, int(arg[0]), bool(arg[1]))
     await FormAdmin.menu.set()
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    buttons = ["Clear sklad_owner", "Clear skladi", "Clear contracts"]
+    buttons = ["Clear sklad_owner", "Clear skladi", "Clear contracts", "email delete"]
     keyboard.add(*buttons)
     buttons = ["clear client", "clear items", "clear skladi_client", "clear all_users"]
     keyboard.add(*buttons)
-    buttons = ["clear all", "all users", "do admin", "back"]
+    buttons = ["clear all", "all users", "do admin", "show clients", "back"]
     keyboard.add(*buttons)
     await message.answer("Меню", reply_markup=keyboard)
 
@@ -160,16 +175,16 @@ async def process_email(message: types.Message, state: FSMContext):
     keyboard.add(*buttons)
     async with state.proxy() as data:
         await message.answer(f"{data['name']} {data['email']} всё так?", reply_markup=keyboard)
-    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    buttons = ["Сдавать", "Арендовывать"]
-    keyboard.add(*buttons)
-    await message.answer("Что вы собираетесь делать?", reply_markup=keyboard)
 
 
 @dp.message_handler(state=FormState.confirm)
 async def confirm(message: types.Message, state: FSMContext):
     if message.text == 'Да':
         await FormState.next()
+        keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        buttons = ["Сдавать", "Арендовывать"]
+        keyboard.add(*buttons)
+        await message.answer("Что вы собираетесь делать?", reply_markup=keyboard)
     if message.text == 'Нет':
         await FormState.name.set()
         await message.answer("Введите ваше имя")
@@ -212,7 +227,7 @@ async def menu(message: types.Message):
     if message.text == 'Мои контракты':
         text = info_about_owner_contracts(connection, message.chat.id)
         for contract in text:
-            await message.answer(f"Номер склада {contract[1]}\nПользователь {contract[2]}\nПродолжительность аренды {contract[3]}\n Цена {contract[4]}\n")
+            await message.answer(f"Номер склада {contract[1]}\nПользователь {contract[2]}\nПродолжительность аренды {contract[3]}\nЦена {contract[4]}\n")
         keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
         buttons = ["Добавить", "Посмотреть уже добавленные склады", "Удалить", "Мои контракты"]
         keyboard.add(*buttons)
@@ -294,7 +309,6 @@ async def menu(message: types.Message):
         text = info_about_client_contracts(connection, message.chat.id)
         for contract in text:
             await message.answer(f"Склад: {contract[1]}\nпродолжительность аренды: {contract[3]}\nцена за аренду: {contract[4]}")
-        await message.reply(text)
         keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
         buttons = ["Арендовать помещение", "Посмотреть свои контракты", "Мои вещи"]
         keyboard.add(*buttons)
