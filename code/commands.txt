@@ -6,3 +6,4 @@ end;
 $$ language plpgsql;
 
 
+create unique index client_email_ on client(client_email)
